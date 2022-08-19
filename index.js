@@ -17,20 +17,41 @@ app.use(
 app.post('/new-message', async (req, res) => {
     const { message } = req.body
     const chatId = message?.chat?.id
-    try {
-        await axios.post(TELEGRAM_URI, {
-          chat_id: chatId,
-          text: message.text
-        })
-        res.send('Done')
-      } catch (e) {
-        console.log(e)
-        res.send(e)
-      }
+
+    console.log(message)
+    console.log(chatId)
+
+    if (message.text == "Привет") {
+      hello(chatId)
+    }
+    else {
+      another(chatId)
+    };
+    
 })
 
+function hello(chatId){
+  axios.post(TELEGRAM_URI, {
+    chat_id: chatId,
+    text: "Приветы!",
+  })
+  .catch(function (error) {
+    console.log(error);
+  });
+}
+
+function another(chatId){
+  axios.post(TELEGRAM_URI, {
+    chat_id: chatId,
+    text: "Чевось хошь?",
+  })
+  .catch(function (error) {
+    console.log(error);
+  });
+}
+
 app.get('/', async (req, res) => {
-    res.send("Hello!");
+    res.send("Hello! I am a bot, how can i help you?");
 })
 
 const PORT = process.env.PORT || 3000
