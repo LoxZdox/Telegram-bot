@@ -1,11 +1,19 @@
 import axios from 'axios'
 import { config } from 'dotenv'
 import express from 'express'
+import sql3 from 'sqlite3'
+
+// const sql3 = require('sqlite3').verbose();
 
 config()
 const app = express()
 
 const TELEGRAM_URI = `https://api.telegram.org/bot${process.env.TELEGRAM_API_TOKEN}/sendMessage`
+
+let sql
+const db = new sql3.Database('./todo.db', sql3.OPEN_READWRITE, (err) => {
+  if(err) return console.error(err.message);
+})
 
 app.use(express.json())
 app.use(
@@ -46,16 +54,18 @@ function hello(chatId, res){
 
 function another(chatId, res){
   try {
-    axios.post(TELEGRAM_URI, {
-      chat_id: chatId,
-      text: "Чевось хошь?",
-    })
-    res.send('Done')
-  }
-  catch (e) {
-    console.log(e)
-    res.send(e)
-  }
+      for(let i=0;i<5;i++){
+        axios.post(TELEGRAM_URI, {
+          chat_id: chatId,
+          text: `Meow ${i}`,
+        })
+      }
+      res.send('Done')
+    }
+    catch (e) {
+      console.log(e)
+      res.send(e)
+    }
 }
 
 app.get('/', async (req, res) => {
