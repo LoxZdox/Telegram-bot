@@ -22,32 +22,40 @@ app.post('/new-message', async (req, res) => {
     console.log(chatId)
 
     if (message.text == "Привет") {
-      hello(chatId)
+      hello(chatId, res)
     }
     else {
-      another(chatId)
+      another(chatId, res)
     };
     
 })
 
-function hello(chatId){
-  axios.post(TELEGRAM_URI, {
-    chat_id: chatId,
-    text: "Приветы!",
-  })
-  .catch(function (error) {
-    console.log(error);
-  });
+function hello(chatId, res){
+  try {
+    axios.post(TELEGRAM_URI, {
+      chat_id: chatId,
+      text: "Приветы!",
+    })
+    res.send('Done')
+  }
+  catch (e) {
+    console.log(e)
+    res.send(e)
+  }
 }
 
-function another(chatId){
-  axios.post(TELEGRAM_URI, {
-    chat_id: chatId,
-    text: "Чевось хошь?",
-  })
-  .catch(function (error) {
-    console.log(error);
-  });
+function another(chatId, res){
+  try {
+    axios.post(TELEGRAM_URI, {
+      chat_id: chatId,
+      text: "Чевось хошь?",
+    })
+    res.send('Done')
+  }
+  catch (e) {
+    console.log(e)
+    res.send(e)
+  }
 }
 
 app.get('/', async (req, res) => {
