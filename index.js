@@ -3,6 +3,8 @@ import { config } from 'dotenv'
 import express from 'express'
 import sql3 from 'sqlite3'
 
+sql3.verbose();
+
 // const sql3 = require('sqlite3').verbose();
 
 config()
@@ -14,6 +16,26 @@ let sql
 const db = new sql3.Database('./todo.db', sql3.OPEN_READWRITE, (err) => {
   if(err) return console.error(err.message);
 })
+
+// sql = `CREATE TABLE todos(id INTEGER PRIMARY KEY, name, datetime, isdone)`;
+// db.run(sql)
+
+// db.run('DROP TABLE todos');
+
+// sql = `INSERT INTO todos(name, datetime, isdone) VALUES (?, ?, ?)`;
+// db.run(sql,
+//    ["Eat", "21.08.2022", true],
+//    (err) => {
+//   if(err) return console.error(err.message);
+// });
+
+sql = `SELECT * FROM todos`;
+db.all(sql, [], (err, rows) => {
+  if(err) return console.error(err.message);
+  rows.forEach(row => {
+    console.log(row);
+  })
+});
 
 app.use(express.json())
 app.use(
@@ -54,7 +76,7 @@ function hello(chatId, res){
 
 function another(chatId, res){
   try {
-      for(let i=0;i<5;i++){
+      for (let i=0;i<5;i++) {
         axios.post(TELEGRAM_URI, {
           chat_id: chatId,
           text: `Meow ${i}`,
