@@ -22,9 +22,8 @@ const db = new sql3.Database('./todo.db', sql3.OPEN_READWRITE, (err) => {
 
 // db.run('DROP TABLE todos');
 
-// sql = `INSERT INTO todos(name, datetime, isdone) VALUES (?, ?, ?)`;
-// db.run(sql,
-//    ["Eat", "21.08.2022", true],
+// db.run(`INSERT INTO todos(name, datetime, isdone) VALUES (?, ?, ?)`,
+//    ["Make something new", "21.08.2022", true],
 //    (err) => {
 //   if(err) return console.error(err.message);
 // });
