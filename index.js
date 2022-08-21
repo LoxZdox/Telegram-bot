@@ -50,7 +50,7 @@ app.post('/new-message', async (req, res) => {
     console.log(message)
     console.log(chatId)
 
-    if (message.text == "Привет") {
+    if (message.text == "Привет"||"Привет."||"/help"||"Приветики"||"Хай"||"Здарова"||"Здравствуйте"||"Добрый вечер"||"Hello"||"Hi"||"Приветики."||"Хай."||"Здарова."||"Здравствуйте."||"Добрый вечер."||"Hello."||"Hi.") {
       hello(chatId, res)
     }
     else {
