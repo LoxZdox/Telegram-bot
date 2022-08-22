@@ -28,13 +28,15 @@ const db = new sql3.Database('./todo.db', sql3.OPEN_READWRITE, (err) => {
 //   if(err) return console.error(err.message);
 // });
 
-sql = `SELECT * FROM todos`;
-db.all(sql, [], (err, rows) => {
-  if(err) return console.error(err.message);
-  rows.forEach(row => {
-    console.log(row);
-  })
-});
+
+
+// db.run(`UPDATE todos SET name = ? WHERE id = ?`, ['Meowy', 1], (err) => {
+//   if(err) return console.error(err.message);
+// })
+
+// db.run(`DELETE FROM todos WHERE id = ?`, [5], (err) => {
+//   if(err) return console.error(err.message);
+// })
 
 app.use(express.json())
 app.use(
@@ -50,10 +52,15 @@ app.post('/new-message', async (req, res) => {
     console.log(message)
     console.log(chatId)
 
-    if (message.text == "Привет"||"Привет."||"/help"||"Приветики"||"Хай"||"Здарова"||"Здравствуйте"||"Добрый вечер"||"Hello"||"Hi"||"Приветики."||"Хай."||"Здарова."||"Здравствуйте."||"Добрый вечер."||"Hello."||"Hi.") {
-      hello(chatId, res)
+    //("Привет"||"Привет."||"/help"||"Приветики"||"Хай"||"Здарова"||"Здравствуйте"||"Добрый вечер"||"Hello"||"Hi"||"Приветики."||"Хай."||"Здарова."||"Здравствуйте."||"Добрый вечер."||"Hello."||"Hi.")
+    if (message.text == "Hello") {
+      hello(chatId, res);
+      help(chatId, res);
     }
-    else {
+    else if (message.text == "/show_todos"){
+      show_todos(chatId, res);
+    }
+    else{
       another(chatId, res)
     };
     
@@ -63,7 +70,7 @@ function hello(chatId, res){
   try {
     axios.post(TELEGRAM_URI, {
       chat_id: chatId,
-      text: "Приветы!",
+      text: "Hewwo! oOwOo",
     })
     res.send('Done')
   }
@@ -75,6 +82,10 @@ function hello(chatId, res){
 
 function another(chatId, res){
   try {
+      axios.post(TELEGRAM_URI, {
+        chat_id: chatId,
+        text: "I don`t really know what to say, so: ",
+      })
       for (let i=0;i<5;i++) {
         axios.post(TELEGRAM_URI, {
           chat_id: chatId,
@@ -87,6 +98,65 @@ function another(chatId, res){
       console.log(e)
       res.send(e)
     }
+}
+
+function help(chatId, res){
+  try{
+      axios.post(TELEGRAM_URI, {
+        chat_id:chatId,
+        text: 'Here`s some commands for you: '+
+        '\n1. Use /show_todos if you want to get full list.'+
+        '\n2. Use /add_todo for adding a new item into your list' +
+        '\n3. Use /edit_todo for editing'+
+        '\n4. Use /complete_todo for completing'+
+        '\n5 Use /delete_todo for deleting'+
+        'Woow that`s a simple menu. xd'
+      })
+    }
+  catch (e) {
+    console.log(e)
+    res.send(e)
+  }
+}
+
+function show_todos(chatId, res){
+  try{
+    sql = `SELECT * FROM todos`;
+    db.all(sql, [], (err, rows) => {
+    if(err) return console.error(err.message);
+      rows.forEach(row => {
+        if (row.isdone == '0')
+        axios.post(TELEGRAM_URI, {
+          chat_id: chatId,
+          text: `${row.id} ${row.name} ${row.datetime} is done: ❌`,
+        })
+        else{
+          axios.post(TELEGRAM_URI, {
+            chat_id: chatId,
+            text: `${row.id} ${row.name} ${row.datetime} is done: ✅`,
+          })
+        }
+        console.log(row);
+      })
+    });
+  }
+  catch(e){}
+}
+function add_todo(chatId, res){
+  try{}
+  catch(e){}
+}
+function edit_todo(chatId, res){
+  try{}
+  catch(e){}
+}
+function complete_todo(chatId, res){
+  try{}
+  catch(e){}
+}
+function delete_todo(chatId, res){
+  try{}
+  catch(e){}
 }
 
 app.get('/', async (req, res) => {
