@@ -52,7 +52,6 @@ app.post('/new-message', async (req, res) => {
     console.log(message)
     console.log(chatId)
 
-    //("Привет"||"Привет."||"/help"||"Приветики"||"Хай"||"Здарова"||"Здравствуйте"||"Добрый вечер"||"Hello"||"Hi"||"Приветики."||"Хай."||"Здарова."||"Здравствуйте."||"Добрый вечер."||"Hello."||"Hi.")
     if (message.text == "Hello") {
       hello(chatId, res);
       help(chatId, res);
@@ -125,23 +124,29 @@ function show_todos(chatId, res){
     db.all(sql, [], (err, rows) => {
     if(err) return console.error(err.message);
       rows.forEach(row => {
-        if (row.isdone == '0')
-        axios.post(TELEGRAM_URI, {
-          chat_id: chatId,
-          text: `${row.id} ${row.name} ${row.datetime} is done: ❌`,
-        })
+        if (row.isdone == '0'){
+          axios.post(TELEGRAM_URI, {
+            chat_id: chatId,
+            text: `${row.name} ___ ${row.datetime} ___ is done: ❌`,
+          })
+        }
         else{
           axios.post(TELEGRAM_URI, {
             chat_id: chatId,
-            text: `${row.id} ${row.name} ${row.datetime} is done: ✅`,
+            text: `${row.name} ___ ${row.datetime} ___ is done: ✅`,
           })
-        }
+        } 
         console.log(row);
       })
+      res.send('Done')
     });
   }
-  catch(e){}
+  catch(e){
+    console.log(e)
+    res.send(e)
+  }
 }
+
 function add_todo(chatId, res){
   try{}
   catch(e){}
