@@ -9,10 +9,11 @@ sql3.verbose();
 
 config()
 const app = express()
-
 const TELEGRAM_URI = `https://api.telegram.org/bot${process.env.TELEGRAM_API_TOKEN}/sendMessage`
 
 let sql
+let state
+let todo_text
 const db = new sql3.Database('./todo.db', sql3.OPEN_READWRITE, (err) => {
   if(err) return console.error(err.message);
 })
@@ -27,8 +28,6 @@ const db = new sql3.Database('./todo.db', sql3.OPEN_READWRITE, (err) => {
 //    (err) => {
 //   if(err) return console.error(err.message);
 // });
-
-
 
 // db.run(`UPDATE todos SET name = ? WHERE id = ?`, ['Meowy', 1], (err) => {
 //   if(err) return console.error(err.message);
@@ -58,6 +57,9 @@ app.post('/new-message', async (req, res) => {
     }
     else if (message.text == "/show_todos"){
       show_todos(chatId, res);
+    }
+    else if ((message.text == "/add_todo")||(state=="adding_name")){
+      add_todo(chatId, res, message);
     }
     else{
       another(chatId, res)
@@ -124,7 +126,13 @@ function show_todos(chatId, res){
     db.all(sql, [], (err, rows) => {
     if(err) return console.error(err.message);
       rows.forEach(row => {
-        if (row.isdone == '0'){
+        if(row == 'null'){
+          axios.post(TELEGRAM_URI, {
+            chat_id: chatId,
+            text: "You don`t have any todos yet! You can make some through /add_todo",
+          })
+        }
+        else if (row.isdone == '0'){
           axios.post(TELEGRAM_URI, {
             chat_id: chatId,
             text: `${row.name} ___ ${row.datetime} ___ is done: ❌`,
@@ -147,10 +155,30 @@ function show_todos(chatId, res){
   }
 }
 
-function add_todo(chatId, res){
-  try{}
-  catch(e){}
+function add_todo(chatId, res, message){
+  try{
+    if((state!="adding_name")&&(state!="adding_datetime")){
+      axios.post(TELEGRAM_URI, {
+        chat_id:chatId,
+        text: 'Please write the description or name of your todo: '
+      })
+      state = "adding_name"
+      res.send('Done')
+    }
+    else if(state=="adding_name"){
+      todo_text = message.text
+      state = "adding_datetime"
+    }
+    else if(state=="adding_datetime"){
+      state = null;
+    }
+  }
+  catch(e){
+    console.log(e)
+    res.send(e)
+  }
 }
+
 function edit_todo(chatId, res){
   try{}
   catch(e){}
