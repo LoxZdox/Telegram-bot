@@ -14,6 +14,7 @@ const TELEGRAM_URI = `https://api.telegram.org/bot${process.env.TELEGRAM_API_TOK
 let sql
 let state
 let todo_text
+let todo_datetime
 const db = new sql3.Database('./todo.db', sql3.OPEN_READWRITE, (err) => {
   if(err) return console.error(err.message);
 })
@@ -23,11 +24,6 @@ const db = new sql3.Database('./todo.db', sql3.OPEN_READWRITE, (err) => {
 
 // db.run('DROP TABLE todos');
 
-// db.run(`INSERT INTO todos(name, datetime, isdone) VALUES (?, ?, ?)`,
-//    ["Make something new", "21.08.2022", true],
-//    (err) => {
-//   if(err) return console.error(err.message);
-// });
 
 // db.run(`UPDATE todos SET name = ? WHERE id = ?`, ['Meowy', 1], (err) => {
 //   if(err) return console.error(err.message);
@@ -58,7 +54,7 @@ app.post('/new-message', async (req, res) => {
     else if (message.text == "/show_todos"){
       show_todos(chatId, res);
     }
-    else if ((message.text == "/add_todo")||(state=="adding_name")){
+    else if ((message.text == "/add_todo")||(state=="adding_name")||(state=="adding_datetime")){
       add_todo(chatId, res, message);
     }
     else{
@@ -163,15 +159,31 @@ function add_todo(chatId, res, message){
         text: 'Please write the description or name of your todo: '
       })
       state = "adding_name"
-      res.send('Done')
     }
     else if(state=="adding_name"){
       todo_text = message.text
+      axios.post(TELEGRAM_URI, {
+        chat_id:chatId,
+        text: 'And datetime is ..?'
+      })
       state = "adding_datetime"
     }
     else if(state=="adding_datetime"){
+      todo_datetime = message.text
+      db.run(`INSERT INTO todos(name, datetime, isdone) VALUES (?, ?, ?)`,
+      [ todo_text, todo_datetime , false],
+      (err) => {
+      if(err) return console.error(err.message);
+      });
+      axios.post(TELEGRAM_URI, {
+        chat_id:chatId,
+        text: `Here's your new todo: \n${todo_text} ___ ${todo_datetime} ___ is done: ❌`
+      })
       state = null;
+      todo_text = null;
+      todo_datetime = null;
     }
+    res.send('Done')
   }
   catch(e){
     console.log(e)
