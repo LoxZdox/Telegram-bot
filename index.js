@@ -21,13 +21,17 @@ const db = new sql3.Database('./todo.db', sql3.OPEN_READWRITE, (err) => {
 
 // sql = `CREATE TABLE todos(id INTEGER PRIMARY KEY, name, datetime, isdone)`;
 // db.run(sql)
-
 // db.run('DROP TABLE todos');
+
+
 
 
 // db.run(`UPDATE todos SET name = ? WHERE id = ?`, ['Meowy', 1], (err) => {
 //   if(err) return console.error(err.message);
 // })
+
+
+
 
 // db.run(`DELETE FROM todos WHERE id = ?`, [5], (err) => {
 //   if(err) return console.error(err.message);
@@ -56,6 +60,9 @@ app.post('/new-message', async (req, res) => {
     }
     else if ((message.text == "/add_todo")||(state=="adding_name")||(state=="adding_datetime")){
       add_todo(chatId, res, message);
+    }
+    else if ((message.text == "/complete_todo")||(state=="compliting_todo")){
+      complete_todo(chatId, res, message);
     }
     else{
       another(chatId, res)
@@ -131,13 +138,13 @@ function show_todos(chatId, res){
         else if (row.isdone == '0'){
           axios.post(TELEGRAM_URI, {
             chat_id: chatId,
-            text: `${row.name} ___ ${row.datetime} ___ is done: ❌`,
+            text: `${row.id} ___ ${row.name} ___ ${row.datetime} ___ is done: ❌`,
           })
         }
         else{
           axios.post(TELEGRAM_URI, {
             chat_id: chatId,
-            text: `${row.name} ___ ${row.datetime} ___ is done: ✅`,
+            text: `${row.id} ___ ${row.name} ___ ${row.datetime} ___ is done: ✅`,
           })
         } 
         console.log(row);
@@ -173,7 +180,7 @@ function add_todo(chatId, res, message){
       db.run(`INSERT INTO todos(name, datetime, isdone) VALUES (?, ?, ?)`,
       [ todo_text, todo_datetime , false],
       (err) => {
-      if(err) return console.error(err.message);
+        if(err) return console.error(err.message);
       });
       axios.post(TELEGRAM_URI, {
         chat_id:chatId,
@@ -191,11 +198,37 @@ function add_todo(chatId, res, message){
   }
 }
 
-function edit_todo(chatId, res){
-  try{}
-  catch(e){}
+function complete_todo(chatId, res, message){
+  // TODO: for tomorrow or else
+  // if i type /complete_todo 5 then i should complete todo 5
+  try{
+    if(state!="compliting_todo"){
+      axios.post(TELEGRAM_URI, {
+        chat_id:chatId,
+        text: "Please write the id of your todo "
+      });
+      state = "compliting_todo"
+    }
+    else if(state=="compliting_todo"){
+        db.run(`UPDATE todos SET isdone = ? WHERE id = ?`, [true, message.text], (err) => {
+        if(err) return console.error(err.message);
+      });
+      db.all(`SELECT * FROM todos WHERE id = ?`, [message.text], (err, rows) => {
+        if(err) return console.error(err.message);
+        axios.post(TELEGRAM_URI, {
+          chat_id:chatId,
+          text: `${rows[0].name} ___ ${rows[0].datetime} __ is done: ✅`
+        });
+      })
+    }
+    res.send('Done');
+  }
+  catch(e){
+    console.log(e)
+    res.send(e)
+  }
 }
-function complete_todo(chatId, res){
+function edit_todo(chatId, res){
   try{}
   catch(e){}
 }
