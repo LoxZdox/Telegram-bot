@@ -55,6 +55,9 @@ app.post('/new-message', async (req, res) => {
       hello(chatId, res);
       help(chatId, res);
     }
+    else if (message.text == "/help"){
+      help(chatId, res);
+    }
     else if (message.text == "/show_todos"){
       show_todos(chatId, res);
     }
@@ -63,6 +66,9 @@ app.post('/new-message', async (req, res) => {
     }
     else if ((message.text == "/complete_todo")||(state=="compliting_todo")){
       complete_todo(chatId, res, message);
+    }
+    else if ((message.text == "/delete_todo")||(state=="deleting_todo")){
+      delete_todo(chatId, res, message);
     }
     else{
       another(chatId, res)
@@ -116,6 +122,7 @@ function help(chatId, res){
         '\n5 Use /delete_todo for deleting'+
         'Woow that`s a simple menu. xd'
       })
+      res.send('Done')
     }
   catch (e) {
     console.log(e)
@@ -128,14 +135,15 @@ function show_todos(chatId, res){
     sql = `SELECT * FROM todos`;
     db.all(sql, [], (err, rows) => {
     if(err) return console.error(err.message);
+    if(rows[0] == null){
+      axios.post(TELEGRAM_URI, {
+        chat_id: chatId,
+        text: "You don`t have any todos yet! You can make some through /add_todo",
+      })
+    }
+    else{
       rows.forEach(row => {
-        if(row == 'null'){
-          axios.post(TELEGRAM_URI, {
-            chat_id: chatId,
-            text: "You don`t have any todos yet! You can make some through /add_todo",
-          })
-        }
-        else if (row.isdone == '0'){
+        if (row.isdone == '0'){
           axios.post(TELEGRAM_URI, {
             chat_id: chatId,
             text: `${row.id} ___ ${row.name} ___ ${row.datetime} ___ is done: ❌`,
@@ -149,6 +157,7 @@ function show_todos(chatId, res){
         } 
         console.log(row);
       })
+    }
       res.send('Done')
     });
   }
@@ -233,7 +242,25 @@ function edit_todo(chatId, res){
   catch(e){}
 }
 function delete_todo(chatId, res){
-  try{}
+  try{
+    if(state!="deleting_todo"){
+      axios.post(TELEGRAM_URI, {
+        chat_id:chatId,
+        text: "Please write the id of your todo "
+      });
+      state = "deleting_todo"
+    }
+    else if(state=="deleting_todo"){
+      db.run(`DELETE FROM todos WHERE id = ?`, [true, message.text], (err) => {
+        if(err) return console.error(err.message);
+        axios.post(TELEGRAM_URI, {
+          chat_id:chatId,
+          text: `Your todo was deleted`
+      });
+    });   
+    }
+    res.send('Done')
+  }
   catch(e){}
 }
 
