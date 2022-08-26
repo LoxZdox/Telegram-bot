@@ -13,6 +13,7 @@ const TELEGRAM_URI = `https://api.telegram.org/bot${process.env.TELEGRAM_API_TOK
 
 let sql
 let state
+let todo_id
 let todo_text
 let todo_datetime
 const db = new sql3.Database('./todo.db', sql3.OPEN_READWRITE, (err) => {
@@ -50,6 +51,7 @@ app.post('/new-message', async (req, res) => {
 
     console.log(message)
     console.log(chatId)
+    console.log(state)
 
     if (message.text == "Hello") {
       hello(chatId, res);
@@ -59,6 +61,9 @@ app.post('/new-message', async (req, res) => {
     }
     else if ((message.text == "/add_todo")||(state=="adding_name")||(state=="adding_datetime")){
       add_todo(chatId, res, message);
+    }
+    else if ((message.text == "/edit_todo")||(state == "choosing_id")||(state == "editing_name")||(state == "editing_datetime")){
+      complete_todo(chatId, res, message);
     }
     else if ((message.text == "/complete_todo")||(state=="compliting_todo")){
       complete_todo(chatId, res, message);
@@ -214,9 +219,49 @@ function complete_todo(chatId, res, message){
     res.send(e)
   }
 }
+
 function edit_todo(chatId, res){
-  try{}
-  catch(e){}
+  try{
+    if((state!="choosing_id")&&(state != "editing_id")&&(state != "editing_datetime")){
+      state = "choosing_id"
+      axios.post(TELEGRAM_URI, {
+        chat_id:chatId,
+        text: "Please write the id of your todo "
+      });
+      console.log(state)
+      
+    }
+    else if(state == "choosing_id"){
+      todo_id = message.text;
+      axios.post(TELEGRAM_URI, {
+        chat_id:chatId,
+        text: "Please write the new name!"
+      });
+      state = "editing_name"
+    }
+    else if(state =="editing_name"){
+      todo_text = message.text;
+      axios.post(TELEGRAM_URI, {
+        chat_id:chatId,
+        text: "Please write the new datetime!"
+      });
+    }
+    else if(state =="editing_datetime"){
+      todo_datetime = message.text;
+      db.run(`UPDATE todos SET name = ?, datetime = ? WHERE id = ?`, [todo_text, todo_datetime, todo_id], (err) => {
+      if(err) return console.error(err.message);
+      });
+    }
+    res.send('Done');
+    state = null;
+    todo_text = null;
+    todo_datetime = null;
+    todo_id = null;
+  }
+  catch(e){
+    console.log(e)
+    res.send(e)
+  }
 }
 function delete_todo(chatId, res, message){
   try{
