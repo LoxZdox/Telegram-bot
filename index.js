@@ -49,8 +49,8 @@ app.post('/new-message', async (req, res) => {
     const { message } = req.body
     const chatId = message?.chat?.id
 
-    console.log(message)
-    console.log(chatId)
+    // console.log(message)
+    // console.log(chatId)
     console.log(state)
 
     if (message.text == "Hello") {
@@ -63,7 +63,7 @@ app.post('/new-message', async (req, res) => {
       add_todo(chatId, res, message);
     }
     else if ((message.text == "/edit_todo")||(state == "choosing_id")||(state == "editing_name")||(state == "editing_datetime")){
-      complete_todo(chatId, res, message);
+      edit_todo(chatId, res, message);
     }
     else if ((message.text == "/complete_todo")||(state=="compliting_todo")){
       complete_todo(chatId, res, message);
@@ -209,10 +209,10 @@ function complete_todo(chatId, res, message){
           chat_id:chatId,
           text: `${rows[0].name} ___ ${rows[0].datetime} __ is done: ✅`
         });
+        state = null;
       })
     }
     res.send('Done');
-    state = null;
   }
   catch(e){
     console.log(e)
@@ -220,16 +220,14 @@ function complete_todo(chatId, res, message){
   }
 }
 
-function edit_todo(chatId, res){
+function edit_todo(chatId, res, message){
   try{
-    if((state!="choosing_id")&&(state != "editing_id")&&(state != "editing_datetime")){
-      state = "choosing_id"
+    if((state!="choosing_id")&&(state != "editing_name")&&(state != "editing_datetime")){
       axios.post(TELEGRAM_URI, {
         chat_id:chatId,
         text: "Please write the id of your todo "
       });
-      console.log(state)
-      
+      state = "choosing_id"
     }
     else if(state == "choosing_id"){
       todo_id = message.text;
@@ -245,24 +243,30 @@ function edit_todo(chatId, res){
         chat_id:chatId,
         text: "Please write the new datetime!"
       });
+      state = "editing_datetime"
     }
     else if(state =="editing_datetime"){
       todo_datetime = message.text;
       db.run(`UPDATE todos SET name = ?, datetime = ? WHERE id = ?`, [todo_text, todo_datetime, todo_id], (err) => {
       if(err) return console.error(err.message);
       });
+      axios.post(TELEGRAM_URI, {
+        chat_id:chatId,
+        text: "Your todo has been updated!"
+      });
+      state = null;
+      todo_text = null;
+      todo_datetime = null;
+      todo_id = null;
     }
     res.send('Done');
-    state = null;
-    todo_text = null;
-    todo_datetime = null;
-    todo_id = null;
   }
   catch(e){
     console.log(e)
     res.send(e)
   }
 }
+
 function delete_todo(chatId, res, message){
   try{
     if(state!="deleting_todo"){
