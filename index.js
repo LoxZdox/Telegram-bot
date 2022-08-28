@@ -5,14 +5,12 @@ import sql3 from 'sqlite3'
 
 sql3.verbose();
 
-// const sql3 = require('sqlite3').verbose();
-
 config()
 const app = express()
 const TELEGRAM_URI = `https://api.telegram.org/bot${process.env.TELEGRAM_API_TOKEN}/sendMessage`
 
 let sql
-let state
+let state = null
 let todo_id
 let todo_text
 let todo_datetime
@@ -23,17 +21,9 @@ const db = new sql3.Database('./todo.db', sql3.OPEN_READWRITE, (err) => {
 // sql = `CREATE TABLE todos(id INTEGER PRIMARY KEY, name, datetime, isdone)`;
 // db.run(sql)
 // db.run('DROP TABLE todos');
-
-
-
-
 // db.run(`UPDATE todos SET name = ? WHERE id = ?`, ['Meowy', 1], (err) => {
 //   if(err) return console.error(err.message);
 // })
-
-
-
-
 // db.run(`DELETE FROM todos WHERE id = ?`, [5], (err) => {
 //   if(err) return console.error(err.message);
 // })
@@ -51,7 +41,7 @@ app.post('/new-message', async (req, res) => {
 
     // console.log(message)
     // console.log(chatId)
-    console.log(state)
+    // console.log(state)
 
     if (message.text == "Hello") {
       hello(chatId, res);
@@ -200,17 +190,25 @@ function complete_todo(chatId, res, message){
       state = "compliting_todo"
     }
     else if(state=="compliting_todo"){
-        db.run(`UPDATE todos SET isdone = ? WHERE id = ?`, [true, message.text], (err) => {
-        if(err) return console.error(err.message);
-      });
-      db.all(`SELECT * FROM todos WHERE id = ?`, [message.text], (err, rows) => {
-        if(err) return console.error(err.message);
-        axios.post(TELEGRAM_URI, {
-          chat_id:chatId,
-          text: `${rows[0].name} ___ ${rows[0].datetime} __ is done: ✅`
-        });
-        state = null;
-      })
+        if(isNaN(message.text) == true){
+          axios.post(TELEGRAM_URI, {
+            chat_id:chatId,
+            text: `it is not an id, please write an id`
+          });
+        }
+        else if(isNaN(message.text) == false){
+          db.run(`UPDATE todos SET isdone = ? WHERE id = ?`, [true, message.text], (err) => {
+            if(err) return console.error(err.message);
+          });
+          db.all(`SELECT * FROM todos WHERE id = ?`, [message.text], (err, rows) => {
+          if(err) return console.error(err.message);
+            axios.post(TELEGRAM_URI, {
+              chat_id:chatId,
+              text: `${rows[0].name} ___ ${rows[0].datetime} __ is done: ✅`
+            });
+            state = null;
+          })
+        }  
     }
     res.send('Done');
   }
