@@ -228,12 +228,20 @@ function edit_todo(chatId, res, message){
       state = "choosing_id"
     }
     else if(state == "choosing_id"){
-      todo_id = message.text;
-      axios.post(TELEGRAM_URI, {
-        chat_id:chatId,
-        text: "Please write the new name!"
-      });
+      if(isNaN(message.text) == true){
+        axios.post(TELEGRAM_URI, {
+          chat_id:chatId,
+          text: `it is not an id, please write an id`
+        });
+      }
+      else if(isNaN(message.text) == false){
+        todo_id = message.text;
+        axios.post(TELEGRAM_URI, {
+          chat_id:chatId,
+          text: "Please write the new name!"
+        });
       state = "editing_name"
+      }
     }
     else if(state =="editing_name"){
       todo_text = message.text;
