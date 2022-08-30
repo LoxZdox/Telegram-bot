@@ -283,15 +283,23 @@ function delete_todo(chatId, res, message){
       state = "deleting_todo"
     }
     else if(state == "deleting_todo"){
+      if(isNaN(message.text) == true){
+        axios.post(TELEGRAM_URI, {
+          chat_id:chatId,
+          text: `it is not an id, please write an id`
+        });
+      }
+      else if(isNaN(message.text) == false){
       db.run(`DELETE FROM todos WHERE id = ?`, [message.text], (err) => {
         console.log('message.text: ' + message.text)
         if(err) return console.error(err.message);
         axios.post(TELEGRAM_URI, {
           chat_id:chatId,
           text: `Your todo was deleted`
+        });
       });
-      state = null;
-    });   
+    state = null;
+      }   
     }
     res.send('Done')
   }
