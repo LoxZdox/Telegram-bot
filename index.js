@@ -197,16 +197,29 @@ function complete_todo(chatId, res, message){
           });
         }
         else if(isNaN(message.text) == false){
-          db.run(`UPDATE todos SET isdone = ? WHERE id = ?`, [true, message.text], (err) => {
-            if(err) return console.error(err.message);
-          });
+          //check if theres any data
           db.all(`SELECT * FROM todos WHERE id = ?`, [message.text], (err, rows) => {
-          if(err) return console.error(err.message);
-            axios.post(TELEGRAM_URI, {
-              chat_id:chatId,
-              text: `${rows[0].name} ___ ${rows[0].datetime} __ is done: ✅`
-            });
-            state = null;
+            if(err) return console.error(err.message);
+            if(typeof(rows[0])==="undefined"){
+              axios.post(TELEGRAM_URI, {
+                chat_id:chatId,
+                text: `Sorry, this todo is deleted, try another one`
+              });
+            }
+            else{
+              console.log(typeof(rows[0]));
+              db.run(`UPDATE todos SET isdone = ? WHERE id = ?`, [true, message.text], (err) => {
+                if(err) return console.error(err.message);
+              });
+              db.all(`SELECT * FROM todos WHERE id = ?`, [message.text], (err, rows) => {
+              if(err) return console.error(err.message);
+                axios.post(TELEGRAM_URI, {
+                  chat_id:chatId,
+                  text: `${rows[0].name} ___ ${rows[0].datetime} __ is done: ✅`
+                });
+                state = null;
+              })
+            }
           })
         }  
     }
@@ -235,12 +248,24 @@ function edit_todo(chatId, res, message){
         });
       }
       else if(isNaN(message.text) == false){
-        todo_id = message.text;
-        axios.post(TELEGRAM_URI, {
-          chat_id:chatId,
-          text: "Please write the new name!"
-        });
-      state = "editing_name"
+        //check if theres any data
+        db.all(`SELECT * FROM todos WHERE id = ?`, [message.text], (err, rows) => {
+          if(err) return console.error(err.message);
+          if(typeof(rows[0])==="undefined"){
+            axios.post(TELEGRAM_URI, {
+              chat_id:chatId,
+              text: `Sorry, this todo is deleted, try another one`
+            });
+          }
+          else{
+            todo_id = message.text;
+            axios.post(TELEGRAM_URI, {
+              chat_id:chatId,
+              text: "Please write the new name!"
+            });
+          state = "editing_name"
+          }
+        })
       }
     }
     else if(state =="editing_name"){
@@ -290,15 +315,27 @@ function delete_todo(chatId, res, message){
         });
       }
       else if(isNaN(message.text) == false){
-      db.run(`DELETE FROM todos WHERE id = ?`, [message.text], (err) => {
-        console.log('message.text: ' + message.text)
-        if(err) return console.error(err.message);
-        axios.post(TELEGRAM_URI, {
-          chat_id:chatId,
-          text: `Your todo was deleted`
-        });
-      });
-    state = null;
+        //check if theres any data
+        db.all(`SELECT * FROM todos WHERE id = ?`, [message.text], (err, rows) => {
+          if(err) return console.error(err.message);
+          if(typeof(rows[0])==="undefined"){
+            axios.post(TELEGRAM_URI, {
+              chat_id:chatId,
+              text: `Sorry, this todo is deleted, try another one`
+            });
+          }
+          else{
+            db.run(`DELETE FROM todos WHERE id = ?`, [message.text], (err) => {
+              console.log('message.text: ' + message.text)
+              if(err) return console.error(err.message);
+              axios.post(TELEGRAM_URI, {
+                chat_id:chatId,
+                text: `Your todo was deleted`
+              });
+            });
+            state = null;
+          }
+        })
       }   
     }
     res.send('Done')
