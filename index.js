@@ -2,12 +2,18 @@ import axios from 'axios'
 import { config } from 'dotenv'
 import express from 'express'
 import sql3 from 'sqlite3'
+// import { null } from 'meow'
 
 sql3.verbose();
 
 config()
 const app = express()
 const TELEGRAM_URI = `https://api.telegram.org/bot${process.env.TELEGRAM_API_TOKEN}/sendMessage`
+//this
+const edit_re = new RegExp(/\/edit_todo* \d+/);
+const complete_re = new RegExp(/\/complete_todo* \d+/);
+const delete_re = new RegExp(/\/delete_todo* \d+/);
+//u dum, ask how to and then rewrite it
 
 let sql
 let state = null
@@ -52,13 +58,19 @@ app.post('/new-message', async (req, res) => {
     else if ((message.text == "/add_todo")||(state=="adding_name")||(state=="adding_datetime")){
       add_todo(chatId, res, message);
     }
-    else if ((message.text == "/edit_todo")||(state == "choosing_id")||(state == "editing_name")||(state == "editing_datetime")){
+    else if ((message.text == "/edit_todo")||(state == "choosing_id")||(state == "editing_name")||(state == "editing_datetime")||
+    ((edit_re.test(message.text)==true)&&(complete_re.test(message.text)==false)&&(delete_re.test(message.text)==false))){
+      console.log(`edit: ${message.text}`)
       edit_todo(chatId, res, message);
     }
-    else if ((message.text == "/complete_todo")||(state=="compliting_todo")){
+    else if ((message.text == "/complete_todo")||(state=="compliting_todo")||
+    ((complete_re.test(message.text)==true)&&(edit_re.test(message.text)==false)&&(delete_re.test(message.text)==false))){
+      console.log(`complete: ${message.text}`)
       complete_todo(chatId, res, message);
     }
-    else if ((message.text == "/delete_todo")||(state == "deleting_todo")){
+    else if ((message.text == "/delete_todo")||(state == "deleting_todo")||
+    ((delete_re.test(message.text)==true)&&(edit_re.test(message.text)==false)&&(complete_re.test(message.text)==false))){
+      console.log(`delete: ${message.text}`)
       delete_todo(chatId, res, message);
     }
     else{
@@ -182,7 +194,34 @@ function complete_todo(chatId, res, message){
   // TODO: for tomorrow or else
   // if i type /complete_todo 5 then i should complete todo 5
   try{
-    if(state!="compliting_todo"){
+    if(complete_re.test(message.text)==true){
+      console.log(`Old text ${message.text}`)
+      console.log(`New Text ${message.text.replace(/\/complete_todo* /, "")}`)
+      db.all(`SELECT * FROM todos WHERE id = ?`, [message.text.replace(/\/complete_todo* /, "")], (err, rows) => {
+        if(err) return console.error(err.message);
+        if(typeof(rows[0])==="undefined"){
+          axios.post(TELEGRAM_URI, {
+            chat_id:chatId,
+            text: `Sorry, this todo is deleted, try another one`
+          });
+        }
+        else{
+          console.log(typeof(rows[0]));
+          db.run(`UPDATE todos SET isdone = ? WHERE id = ?`, [true, message.text.replace(/\/complete_todo* /, "")], (err) => {
+            if(err) return console.error(err.message);
+          });
+          db.all(`SELECT * FROM todos WHERE id = ?`, [message.text.replace(/\/complete_todo* /, "")], (err, rows) => {
+          if(err) return console.error(err.message);
+            axios.post(TELEGRAM_URI, {
+              chat_id:chatId,
+              text: `${rows[0].name} ___ ${rows[0].datetime} __ is done: ✅`
+            });
+            state = null;
+          })
+        }
+      })
+    }
+    else if((state!="compliting_todo")&&(complete_re.test(message.text)!=true)){
       axios.post(TELEGRAM_URI, {
         chat_id:chatId,
         text: "Please write the id of your todo "
@@ -197,7 +236,6 @@ function complete_todo(chatId, res, message){
           });
         }
         else if(isNaN(message.text) == false){
-          //check if theres any data
           db.all(`SELECT * FROM todos WHERE id = ?`, [message.text], (err, rows) => {
             if(err) return console.error(err.message);
             if(typeof(rows[0])==="undefined"){
@@ -232,6 +270,12 @@ function complete_todo(chatId, res, message){
 }
 
 function edit_todo(chatId, res, message){
+  
+
+  // TODO: for tomorrow or else
+  // if i type /complete_todo 5 then i should complete todo 5
+
+
   try{
     if((state!="choosing_id")&&(state != "editing_name")&&(state != "editing_datetime")){
       axios.post(TELEGRAM_URI, {
@@ -299,6 +343,12 @@ function edit_todo(chatId, res, message){
 }
 
 function delete_todo(chatId, res, message){
+  
+
+  // TODO: for tomorrow or else
+  // if i type /complete_todo 5 then i should complete todo 5
+
+
   try{
     if(state!="deleting_todo"){
       axios.post(TELEGRAM_URI, {
