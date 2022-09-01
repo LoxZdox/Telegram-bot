@@ -60,17 +60,14 @@ app.post('/new-message', async (req, res) => {
     }
     else if ((message.text == "/edit_todo")||(state == "choosing_id")||(state == "editing_name")||(state == "editing_datetime")||
     ((edit_re.test(message.text)==true)&&(complete_re.test(message.text)==false)&&(delete_re.test(message.text)==false))){
-      console.log(`edit: ${message.text}`)
       edit_todo(chatId, res, message);
     }
     else if ((message.text == "/complete_todo")||(state=="compliting_todo")||
     ((complete_re.test(message.text)==true)&&(edit_re.test(message.text)==false)&&(delete_re.test(message.text)==false))){
-      console.log(`complete: ${message.text}`)
       complete_todo(chatId, res, message);
     }
     else if ((message.text == "/delete_todo")||(state == "deleting_todo")||
     ((delete_re.test(message.text)==true)&&(edit_re.test(message.text)==false)&&(complete_re.test(message.text)==false))){
-      console.log(`delete: ${message.text}`)
       delete_todo(chatId, res, message);
     }
     else{
@@ -191,18 +188,14 @@ function add_todo(chatId, res, message){
 }
 
 function complete_todo(chatId, res, message){
-  // TODO: for tomorrow or else
-  // if i type /complete_todo 5 then i should complete todo 5
   try{
     if(complete_re.test(message.text)==true){
-      console.log(`Old text ${message.text}`)
-      console.log(`New Text ${message.text.replace(/\/complete_todo* /, "")}`)
       db.all(`SELECT * FROM todos WHERE id = ?`, [message.text.replace(/\/complete_todo* /, "")], (err, rows) => {
         if(err) return console.error(err.message);
         if(typeof(rows[0])==="undefined"){
           axios.post(TELEGRAM_URI, {
             chat_id:chatId,
-            text: `Sorry, this todo is deleted, try another one`
+            text: 'Sorry, this todo is deleted or doesn`t exist yet, try another one'
           });
         }
         else{
@@ -241,7 +234,7 @@ function complete_todo(chatId, res, message){
             if(typeof(rows[0])==="undefined"){
               axios.post(TELEGRAM_URI, {
                 chat_id:chatId,
-                text: `Sorry, this todo is deleted, try another one`
+                text: 'Sorry, this todo is deleted or doesn`t exist yet, try another one'
               });
             }
             else{
@@ -270,14 +263,27 @@ function complete_todo(chatId, res, message){
 }
 
 function edit_todo(chatId, res, message){
-  
-
-  // TODO: for tomorrow or else
-  // if i type /complete_todo 5 then i should complete todo 5
-
-
   try{
-    if((state!="choosing_id")&&(state != "editing_name")&&(state != "editing_datetime")){
+    if(edit_re.test(message.text)==true){
+      db.all(`SELECT * FROM todos WHERE id = ?`, [message.text.replace(/\/edit_todo* /, "")], (err, rows) => {
+        if(err) return console.error(err.message);
+        if(typeof(rows[0])==="undefined"){
+          axios.post(TELEGRAM_URI, {
+            chat_id:chatId,
+            text: 'Sorry, this todo is deleted or doesn`t exist yet, try another one'
+          });
+        }
+        else{ 
+          todo_id = message.text.replace(/\/edit_todo* /, "");
+          axios.post(TELEGRAM_URI, {
+            chat_id:chatId,
+            text: "Please write the new name!"
+          });
+          state = "editing_name"
+        }
+      })
+    }
+    else if((state!="choosing_id")&&(state != "editing_name")&&(state != "editing_datetime")){
       axios.post(TELEGRAM_URI, {
         chat_id:chatId,
         text: "Please write the id of your todo "
@@ -292,13 +298,12 @@ function edit_todo(chatId, res, message){
         });
       }
       else if(isNaN(message.text) == false){
-        //check if theres any data
         db.all(`SELECT * FROM todos WHERE id = ?`, [message.text], (err, rows) => {
           if(err) return console.error(err.message);
           if(typeof(rows[0])==="undefined"){
             axios.post(TELEGRAM_URI, {
               chat_id:chatId,
-              text: `Sorry, this todo is deleted, try another one`
+              text: 'Sorry, this todo is deleted or doesn`t exist yet, try another one'
             });
           }
           else{
@@ -343,14 +348,29 @@ function edit_todo(chatId, res, message){
 }
 
 function delete_todo(chatId, res, message){
-  
-
-  // TODO: for tomorrow or else
-  // if i type /complete_todo 5 then i should complete todo 5
-
-
   try{
-    if(state!="deleting_todo"){
+    if(delete_re.test(message.text)==true){
+      db.all(`SELECT * FROM todos WHERE id = ?`, [message.text.replace(/\/delete_todo* /, "")], (err, rows) => {
+        if(err) return console.error(err.message);
+        if(typeof(rows[0])==="undefined"){
+          axios.post(TELEGRAM_URI, {
+            chat_id:chatId,
+            text: 'Sorry, this todo is already deleted or doesn`t exist yet, try another one'
+          });
+        }
+        else{ 
+          db.run(`DELETE FROM todos WHERE id = ?`, [message.text.replace(/\/delete_todo* /, "")], (err) => {
+            if(err) return console.error(err.message);
+            axios.post(TELEGRAM_URI, {
+              chat_id:chatId,
+              text: `Your todo has been deleted`
+            });
+          });
+          state = null;
+        }
+      })
+    }
+    else if(state!="deleting_todo"){
       axios.post(TELEGRAM_URI, {
         chat_id:chatId,
         text: "Please write the id of your todo "
@@ -371,16 +391,15 @@ function delete_todo(chatId, res, message){
           if(typeof(rows[0])==="undefined"){
             axios.post(TELEGRAM_URI, {
               chat_id:chatId,
-              text: `Sorry, this todo is deleted, try another one`
+              text: 'Sorry, this todo is already deleted or doesn`t exist yet, try another one'
             });
           }
           else{
             db.run(`DELETE FROM todos WHERE id = ?`, [message.text], (err) => {
-              console.log('message.text: ' + message.text)
               if(err) return console.error(err.message);
               axios.post(TELEGRAM_URI, {
                 chat_id:chatId,
-                text: `Your todo was deleted`
+                text: `Your todo has been deleted`
               });
             });
             state = null;
