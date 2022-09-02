@@ -2,7 +2,6 @@ import axios from 'axios'
 import { config } from 'dotenv'
 import express from 'express'
 import sql3 from 'sqlite3'
-// import { null } from 'meow'
 
 sql3.verbose();
 
@@ -17,6 +16,7 @@ const delete_re = new RegExp(/\/delete_todo* \d+/);
 
 let sql
 let state = null
+let user_state = null
 let todo_id
 let todo_text
 let todo_datetime
@@ -24,7 +24,7 @@ const db = new sql3.Database('./todo.db', sql3.OPEN_READWRITE, (err) => {
   if(err) return console.error(err.message);
 })
 
-// sql = `CREATE TABLE todos(id INTEGER PRIMARY KEY, name, datetime, isdone)`;
+// sql = `CREATE TABLE todos(id INTEGER PRIMARY KEY, name, datetime, isdone, user_id)`;
 // db.run(sql)
 // db.run('DROP TABLE todos');
 // db.run(`UPDATE todos SET name = ? WHERE id = ?`, ['Meowy', 1], (err) => {
@@ -46,17 +46,19 @@ app.post('/new-message', async (req, res) => {
     const chatId = message?.chat?.id
 
     // console.log(message)
+    // console.log(req.body.message.from.id)
+    console.log(chatId)
     // console.log(chatId)
     // console.log(state)
 
-    if (message.text == "Hello") {
+    if (message.text == "/start") {
       hello(chatId, res);
     }
     else if (message.text == "/show_todos"){
       show_todos(chatId, res);
     }
     else if ((message.text == "/add_todo")||(state=="adding_name")||(state=="adding_datetime")){
-      add_todo(chatId, res, message);
+      add_todo(chatId, res, message, req);
     }
     else if ((message.text == "/edit_todo")||(state == "choosing_id")||(state == "editing_name")||(state == "editing_datetime")||
     ((edit_re.test(message.text)==true)&&(complete_re.test(message.text)==false)&&(delete_re.test(message.text)==false))){
@@ -73,14 +75,13 @@ app.post('/new-message', async (req, res) => {
     else{
       another(chatId, res)
     };
-    
 })
 
 function hello(chatId, res){
   try {
     axios.post(TELEGRAM_URI, {
       chat_id: chatId,
-      text: "Hewwo! oOwOo",
+      text: "Hewwo! oOwOo \nI`m todo-bot",
     })
     res.send('Done')
   }
@@ -112,8 +113,7 @@ function another(chatId, res){
 
 function show_todos(chatId, res){
   try{
-    sql = `SELECT * FROM todos`;
-    db.all(sql, [], (err, rows) => {
+    db.all(`SELECT * FROM todos WHERE user_id = ?`, [chatId], (err, rows) => {
     if(err) return console.error(err.message);
     if(rows[0] == null){
       axios.post(TELEGRAM_URI, {
@@ -135,7 +135,7 @@ function show_todos(chatId, res){
             text: `${row.id} ___ ${row.name} ___ ${row.datetime} ___ is done: ✅`,
           })
         } 
-        console.log(row);
+        // console.log(row);
       })
     }
       res.send('Done')
@@ -147,7 +147,7 @@ function show_todos(chatId, res){
   }
 }
 
-function add_todo(chatId, res, message){
+function add_todo(chatId, res, message, req){
   try{
     if((state!="adding_name")&&(state!="adding_datetime")){
       axios.post(TELEGRAM_URI, {
@@ -166,8 +166,8 @@ function add_todo(chatId, res, message){
     }
     else if(state=="adding_datetime"){
       todo_datetime = message.text
-      db.run(`INSERT INTO todos(name, datetime, isdone) VALUES (?, ?, ?)`,
-      [ todo_text, todo_datetime , false],
+      db.run(`INSERT INTO todos(name, datetime, isdone, user_id) VALUES (?, ?, ?, ?)`,
+      [todo_text, todo_datetime , false, chatId],
       (err) => {
         if(err) return console.error(err.message);
       });
@@ -190,16 +190,15 @@ function add_todo(chatId, res, message){
 function complete_todo(chatId, res, message){
   try{
     if(complete_re.test(message.text)==true){
-      db.all(`SELECT * FROM todos WHERE id = ?`, [message.text.replace(/\/complete_todo* /, "")], (err, rows) => {
+      db.all(`SELECT * FROM todos WHERE id = ? AND user_id = ?`, [message.text.replace(/\/complete_todo* /, ""), chatId], (err, rows) => {
         if(err) return console.error(err.message);
         if(typeof(rows[0])==="undefined"){
           axios.post(TELEGRAM_URI, {
             chat_id:chatId,
-            text: 'Sorry, this todo is deleted or doesn`t exist yet, try another one'
+            text: 'Sorry, this todo doesn`t exist, try another one'
           });
         }
         else{
-          console.log(typeof(rows[0]));
           db.run(`UPDATE todos SET isdone = ? WHERE id = ?`, [true, message.text.replace(/\/complete_todo* /, "")], (err) => {
             if(err) return console.error(err.message);
           });
@@ -229,7 +228,7 @@ function complete_todo(chatId, res, message){
           });
         }
         else if(isNaN(message.text) == false){
-          db.all(`SELECT * FROM todos WHERE id = ?`, [message.text], (err, rows) => {
+          db.all(`SELECT * FROM todos WHERE id = ? AND user_id = ?`, [message.text, chatId], (err, rows) => {
             if(err) return console.error(err.message);
             if(typeof(rows[0])==="undefined"){
               axios.post(TELEGRAM_URI, {
@@ -238,7 +237,6 @@ function complete_todo(chatId, res, message){
               });
             }
             else{
-              console.log(typeof(rows[0]));
               db.run(`UPDATE todos SET isdone = ? WHERE id = ?`, [true, message.text], (err) => {
                 if(err) return console.error(err.message);
               });
@@ -265,12 +263,12 @@ function complete_todo(chatId, res, message){
 function edit_todo(chatId, res, message){
   try{
     if(edit_re.test(message.text)==true){
-      db.all(`SELECT * FROM todos WHERE id = ?`, [message.text.replace(/\/edit_todo* /, "")], (err, rows) => {
+      db.all(`SELECT * FROM todos WHERE id = ? AND user_id = ?`, [message.text.replace(/\/edit_todo* /, ""), chatId], (err, rows) => {
         if(err) return console.error(err.message);
         if(typeof(rows[0])==="undefined"){
           axios.post(TELEGRAM_URI, {
             chat_id:chatId,
-            text: 'Sorry, this todo is deleted or doesn`t exist yet, try another one'
+            text: 'Sorry, this todo doesn`t exist, try another one'
           });
         }
         else{ 
@@ -298,12 +296,12 @@ function edit_todo(chatId, res, message){
         });
       }
       else if(isNaN(message.text) == false){
-        db.all(`SELECT * FROM todos WHERE id = ?`, [message.text], (err, rows) => {
+        db.all(`SELECT * FROM todos WHERE id = ? AND user_id = ?`, [message.text, chatId], (err, rows) => {
           if(err) return console.error(err.message);
           if(typeof(rows[0])==="undefined"){
             axios.post(TELEGRAM_URI, {
               chat_id:chatId,
-              text: 'Sorry, this todo is deleted or doesn`t exist yet, try another one'
+              text: 'Sorry, this todo doesn`t exist, try another one'
             });
           }
           else{
@@ -350,12 +348,12 @@ function edit_todo(chatId, res, message){
 function delete_todo(chatId, res, message){
   try{
     if(delete_re.test(message.text)==true){
-      db.all(`SELECT * FROM todos WHERE id = ?`, [message.text.replace(/\/delete_todo* /, "")], (err, rows) => {
+      db.all(`SELECT * FROM todos WHERE id = ? AND user_id = ?`, [message.text.replace(/\/delete_todo* /, ""), chatId], (err, rows) => {
         if(err) return console.error(err.message);
         if(typeof(rows[0])==="undefined"){
           axios.post(TELEGRAM_URI, {
             chat_id:chatId,
-            text: 'Sorry, this todo is already deleted or doesn`t exist yet, try another one'
+            text: 'Sorry, this todo is already deleted or doesn`t exist, try another one'
           });
         }
         else{ 
@@ -385,13 +383,12 @@ function delete_todo(chatId, res, message){
         });
       }
       else if(isNaN(message.text) == false){
-        //check if theres any data
-        db.all(`SELECT * FROM todos WHERE id = ?`, [message.text], (err, rows) => {
+        db.all(`SELECT * FROM todos WHERE id = ? AND user_id = ?`, [message.text, chatId], (err, rows) => {
           if(err) return console.error(err.message);
           if(typeof(rows[0])==="undefined"){
             axios.post(TELEGRAM_URI, {
               chat_id:chatId,
-              text: 'Sorry, this todo is already deleted or doesn`t exist yet, try another one'
+              text: 'Sorry, this todo is already deleted or doesn`t exist, try another one'
             });
           }
           else{
