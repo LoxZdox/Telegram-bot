@@ -8,18 +8,16 @@ sql3.verbose();
 config()
 const app = express()
 const TELEGRAM_URI = `https://api.telegram.org/bot${process.env.TELEGRAM_API_TOKEN}/sendMessage`
-//this
 const edit_re = new RegExp(/\/edit_todo* \d+/);
 const complete_re = new RegExp(/\/complete_todo* \d+/);
 const delete_re = new RegExp(/\/delete_todo* \d+/);
-//u dum, ask how to and then rewrite it
 
 let sql
 let state = null
-let user_state = null
 let todo_id
 let todo_text
 let todo_datetime
+let user_state = {}
 const db = new sql3.Database('./todo.db', sql3.OPEN_READWRITE, (err) => {
   if(err) return console.error(err.message);
 })
@@ -44,31 +42,37 @@ app.use(
 app.post('/new-message', async (req, res) => {
     const { message } = req.body
     const chatId = message?.chat?.id
-
+    if(!user_state.hasOwnProperty(chatId)){
+      user_state[chatId] = {state: "default", todo_text: null, todo_datetime: null, todo_id: null}
+    }
     // console.log(message)
     // console.log(req.body.message.from.id)
-    console.log(chatId)
+    // console.log(chatId)
     // console.log(chatId)
     // console.log(state)
-
+    else{
+      console.log(user_state[chatId]["state"])
+      console.log(user_state[chatId].state)
+    }
     if (message.text == "/start") {
       hello(chatId, res);
     }
     else if (message.text == "/show_todos"){
       show_todos(chatId, res);
     }
-    else if ((message.text == "/add_todo")||(state=="adding_name")||(state=="adding_datetime")){
+    else if ((message.text == "/add_todo")||(user_state[chatId].state=="adding_name")||(user_state[chatId].state=="adding_datetime")){
       add_todo(chatId, res, message, req);
     }
-    else if ((message.text == "/edit_todo")||(state == "choosing_id")||(state == "editing_name")||(state == "editing_datetime")||
+    else if ((message.text == "/edit_todo")||(user_state[chatId].state== "choosing_id")||(user_state[chatId].state == "editing_name")||
+    (user_state[chatId].state == "editing_datetime")||
     ((edit_re.test(message.text)==true)&&(complete_re.test(message.text)==false)&&(delete_re.test(message.text)==false))){
       edit_todo(chatId, res, message);
     }
-    else if ((message.text == "/complete_todo")||(state=="compliting_todo")||
+    else if ((message.text == "/complete_todo")||(user_state[chatId].state=="compliting_todo")||
     ((complete_re.test(message.text)==true)&&(edit_re.test(message.text)==false)&&(delete_re.test(message.text)==false))){
       complete_todo(chatId, res, message);
     }
-    else if ((message.text == "/delete_todo")||(state == "deleting_todo")||
+    else if ((message.text == "/delete_todo")||(user_state[chatId].state == "deleting_todo")||
     ((delete_re.test(message.text)==true)&&(edit_re.test(message.text)==false)&&(complete_re.test(message.text)==false))){
       delete_todo(chatId, res, message);
     }
@@ -135,7 +139,6 @@ function show_todos(chatId, res){
             text: `${row.id} ___ ${row.name} ___ ${row.datetime} ___ is done: ✅`,
           })
         } 
-        // console.log(row);
       })
     }
       res.send('Done')
@@ -147,37 +150,39 @@ function show_todos(chatId, res){
   }
 }
 
-function add_todo(chatId, res, message, req){
+function add_todo(chatId, res, message){
   try{
-    if((state!="adding_name")&&(state!="adding_datetime")){
+    if((user_state[chatId]["state"]!="adding_name")&&(user_state[chatId]["state"]!="adding_datetime")){
       axios.post(TELEGRAM_URI, {
         chat_id:chatId,
         text: 'Please write the description or name of your todo: '
       })
-      state = "adding_name"
+      user_state[chatId]["state"] = "adding_name"
     }
-    else if(state=="adding_name"){
-      todo_text = message.text
+    else if(user_state[chatId]["state"]=="adding_name"){
+      user_state[chatId]["todo_text"] = message.text
       axios.post(TELEGRAM_URI, {
         chat_id:chatId,
         text: 'And datetime is ..?'
       })
-      state = "adding_datetime"
+      user_state[chatId]["state"] = "adding_datetime"
     }
-    else if(state=="adding_datetime"){
-      todo_datetime = message.text
+    else if(user_state[chatId]["state"]=="adding_datetime"){
+      user_state[chatId]["todo_datetime"] = message.text
       db.run(`INSERT INTO todos(name, datetime, isdone, user_id) VALUES (?, ?, ?, ?)`,
-      [todo_text, todo_datetime , false, chatId],
+      [user_state[chatId]["todo_text"], user_state[chatId]["todo_datetime"] , false, chatId],
       (err) => {
         if(err) return console.error(err.message);
       });
       axios.post(TELEGRAM_URI, {
         chat_id:chatId,
-        text: `Here's your new todo: \n${todo_text} ___ ${todo_datetime} ___ is done: ❌`
+        text: `Here's your new todo: \n${user_state[chatId]["todo_text"]} ___ ${user_state[chatId]["todo_datetime"]} ___ is done: ❌`
       })
-      state = null;
-      todo_text = null;
-      todo_datetime = null;
+      user_state[chatId].state = "default";
+      console.log(user_state[chatId]);
+      user_state[chatId].todo_text = null;
+      user_state[chatId].todo_datetime = null;
+      user_state[chatId].todo_id = null;
     }
     res.send('Done')
   }
