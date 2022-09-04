@@ -51,8 +51,9 @@ app.post('/new-message', async (req, res) => {
     // console.log(chatId)
     // console.log(state)
     else{
+      console.log('ChatId: ')
       console.log(user_state[chatId]["state"])
-      console.log(user_state[chatId].state)
+      console.log(', user: ')
     }
     if (message.text == "/start") {
       hello(chatId, res);
@@ -60,20 +61,20 @@ app.post('/new-message', async (req, res) => {
     else if (message.text == "/show_todos"){
       show_todos(chatId, res);
     }
-    else if ((message.text == "/add_todo")||(user_state[chatId].state=="adding_name")||(user_state[chatId].state=="adding_datetime")){
+    else if ((message.text == "/add_todo")||(user_state[chatId].state =="adding_name")||(user_state[chatId].state =="adding_datetime")){
       add_todo(chatId, res, message, req);
     }
-    else if ((message.text == "/edit_todo")||(user_state[chatId].state== "choosing_id")||(user_state[chatId].state == "editing_name")||
+    else if ((message.text == "/edit_todo")||(user_state[chatId].state == "choosing_id")||(user_state[chatId].state == "editing_name")||
     (user_state[chatId].state == "editing_datetime")||
-    ((edit_re.test(message.text)==true)&&(complete_re.test(message.text)==false)&&(delete_re.test(message.text)==false))){
+    ((edit_re.test(message.text) == true)&&(complete_re.test(message.text) == false)&&(delete_re.test(message.text) == false))){
       edit_todo(chatId, res, message);
     }
-    else if ((message.text == "/complete_todo")||(user_state[chatId].state=="compliting_todo")||
-    ((complete_re.test(message.text)==true)&&(edit_re.test(message.text)==false)&&(delete_re.test(message.text)==false))){
+    else if ((message.text == "/complete_todo")||(user_state[chatId].state == "compliting_todo")||
+    ((complete_re.test(message.text) == true)&&(edit_re.test(message.text) == false)&&(delete_re.test(message.text) == false))){
       complete_todo(chatId, res, message);
     }
     else if ((message.text == "/delete_todo")||(user_state[chatId].state == "deleting_todo")||
-    ((delete_re.test(message.text)==true)&&(edit_re.test(message.text)==false)&&(complete_re.test(message.text)==false))){
+    ((delete_re.test(message.text) == true)&&(edit_re.test(message.text) == false)&&(complete_re.test(message.text) == false))){
       delete_todo(chatId, res, message);
     }
     else{
@@ -152,31 +153,31 @@ function show_todos(chatId, res){
 
 function add_todo(chatId, res, message){
   try{
-    if((user_state[chatId]["state"]!="adding_name")&&(user_state[chatId]["state"]!="adding_datetime")){
+    if((user_state[chatId].state!="adding_name")&&(user_state[chatId].state!="adding_datetime")){
       axios.post(TELEGRAM_URI, {
         chat_id:chatId,
         text: 'Please write the description or name of your todo: '
       })
-      user_state[chatId]["state"] = "adding_name"
+      user_state[chatId].state = "adding_name"
     }
-    else if(user_state[chatId]["state"]=="adding_name"){
-      user_state[chatId]["todo_text"] = message.text
+    else if(user_state[chatId].state =="adding_name"){
+      user_state[chatId].todo_text = message.text
       axios.post(TELEGRAM_URI, {
         chat_id:chatId,
         text: 'And datetime is ..?'
       })
-      user_state[chatId]["state"] = "adding_datetime"
+      user_state[chatId].state = "adding_datetime"
     }
-    else if(user_state[chatId]["state"]=="adding_datetime"){
-      user_state[chatId]["todo_datetime"] = message.text
+    else if(user_state[chatId].state=="adding_datetime"){
+      user_state[chatId].todo_datetime = message.text
       db.run(`INSERT INTO todos(name, datetime, isdone, user_id) VALUES (?, ?, ?, ?)`,
-      [user_state[chatId]["todo_text"], user_state[chatId]["todo_datetime"] , false, chatId],
+      [user_state[chatId].todo_text, user_state[chatId].todo_datetime , false, chatId],
       (err) => {
         if(err) return console.error(err.message);
       });
       axios.post(TELEGRAM_URI, {
         chat_id:chatId,
-        text: `Here's your new todo: \n${user_state[chatId]["todo_text"]} ___ ${user_state[chatId]["todo_datetime"]} ___ is done: ❌`
+        text: `Here's your new todo: \n${user_state[chatId].todo_text} ___ ${user_state[chatId].todo_datetime} ___ is done: ❌`
       })
       user_state[chatId].state = "default";
       console.log(user_state[chatId]);
@@ -213,19 +214,19 @@ function complete_todo(chatId, res, message){
               chat_id:chatId,
               text: `${rows[0].name} ___ ${rows[0].datetime} __ is done: ✅`
             });
-            state = null;
+            user_state[chatId].state = "default";
           })
         }
       })
     }
-    else if((state!="compliting_todo")&&(complete_re.test(message.text)!=true)){
+    else if((user_state[chatId].state!="compliting_todo")&&(complete_re.test(message.text)!=true)){
       axios.post(TELEGRAM_URI, {
         chat_id:chatId,
         text: "Please write the id of your todo "
       });
-      state = "compliting_todo"
+      user_state[chatId].state = "compliting_todo"
     }
-    else if(state=="compliting_todo"){
+    else if(user_state[chatId].state=="compliting_todo"){
         if(isNaN(message.text) == true){
           axios.post(TELEGRAM_URI, {
             chat_id:chatId,
@@ -251,7 +252,7 @@ function complete_todo(chatId, res, message){
                   chat_id:chatId,
                   text: `${rows[0].name} ___ ${rows[0].datetime} __ is done: ✅`
                 });
-                state = null;
+                user_state[chatId].state = null;
               })
             }
           })
