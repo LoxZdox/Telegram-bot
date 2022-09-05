@@ -370,18 +370,18 @@ function delete_todo(chatId, res, message){
               text: `Your todo has been deleted`
             });
           });
-          state = null;
+          user_state[chatId].state = null;
         }
       })
     }
-    else if(state!="deleting_todo"){
+    else if(user_state[chatId].state!="deleting_todo"){
       axios.post(TELEGRAM_URI, {
         chat_id:chatId,
         text: "Please write the id of your todo "
       });
-      state = "deleting_todo"
+      user_state[chatId].state = "deleting_todo"
     }
-    else if(state == "deleting_todo"){
+    else if(user_state[chatId].state == "deleting_todo"){
       if(isNaN(message.text) == true){
         axios.post(TELEGRAM_URI, {
           chat_id:chatId,
@@ -405,7 +405,7 @@ function delete_todo(chatId, res, message){
                 text: `Your todo has been deleted`
               });
             });
-            state = null;
+            user_state[chatId].state = null;
           }
         })
       }   
