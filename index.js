@@ -278,23 +278,23 @@ function edit_todo(chatId, res, message){
           });
         }
         else{ 
-          todo_id = message.text.replace(/\/edit_todo* /, "");
+          user_state[chatId].todo_id = message.text.replace(/\/edit_todo* /, "");
           axios.post(TELEGRAM_URI, {
             chat_id:chatId,
             text: "Please write the new name!"
           });
-          state = "editing_name"
+          user_state[chatId].state = "editing_name"
         }
       })
     }
-    else if((state!="choosing_id")&&(state != "editing_name")&&(state != "editing_datetime")){
+    else if((user_state[chatId].state !="choosing_id")&&(user_state[chatId].state != "editing_name")&&(user_state[chatId].state != "editing_datetime")){
       axios.post(TELEGRAM_URI, {
         chat_id:chatId,
         text: "Please write the id of your todo "
       });
-      state = "choosing_id"
+      user_state[chatId].state = "choosing_id"
     }
-    else if(state == "choosing_id"){
+    else if(user_state[chatId].state == "choosing_id"){
       if(isNaN(message.text) == true){
         axios.post(TELEGRAM_URI, {
           chat_id:chatId,
@@ -311,37 +311,37 @@ function edit_todo(chatId, res, message){
             });
           }
           else{
-            todo_id = message.text;
+            user_state[chatId].todo_id = message.text;
             axios.post(TELEGRAM_URI, {
               chat_id:chatId,
               text: "Please write the new name!"
             });
-          state = "editing_name"
+            user_state[chatId].state = "editing_name"
           }
         })
       }
     }
-    else if(state =="editing_name"){
-      todo_text = message.text;
+    else if(user_state[chatId].state =="editing_name"){
+      user_state[chatId].todo_text = message.text;
       axios.post(TELEGRAM_URI, {
         chat_id:chatId,
         text: "Please write the new datetime!"
       });
-      state = "editing_datetime"
+      user_state[chatId].state = "editing_datetime"
     }
-    else if(state =="editing_datetime"){
-      todo_datetime = message.text;
-      db.run(`UPDATE todos SET name = ?, datetime = ? WHERE id = ?`, [todo_text, todo_datetime, todo_id], (err) => {
+    else if(user_state[chatId].state =="editing_datetime"){
+      user_state[chatId].todo_datetime = message.text;
+      db.run(`UPDATE todos SET name = ?, datetime = ? WHERE id = ?`, [user_state[chatId].todo_text, user_state[chatId].todo_datetime, user_state[chatId].todo_id], (err) => {
       if(err) return console.error(err.message);
       });
       axios.post(TELEGRAM_URI, {
         chat_id:chatId,
         text: "Your todo has been updated!"
       });
-      state = null;
-      todo_text = null;
-      todo_datetime = null;
-      todo_id = null;
+      user_state[chatId].state = null;
+      user_state[chatId].todo_text = null;
+      user_state[chatId].todo_datetime = null;
+      user_state[chatId].todo_id = null;
     }
     res.send('Done');
   }
