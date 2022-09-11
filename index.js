@@ -12,11 +12,6 @@ const edit_re = new RegExp(/\/edit_todo* \d+/);
 const complete_re = new RegExp(/\/complete_todo* \d+/);
 const delete_re = new RegExp(/\/delete_todo* \d+/);
 
-let sql
-let state = null
-let todo_id
-let todo_text
-let todo_datetime
 let user_state = {}
 const db = new sql3.Database('./todo.db', sql3.OPEN_READWRITE, (err) => {
   if(err) return console.error(err.message);
@@ -36,7 +31,7 @@ app.use(express.json())
 app.use(
   express.urlencoded({
     extended: true
-  })
+  })  
 )
 
 app.post('/new-message', async (req, res) => {
@@ -153,7 +148,7 @@ function show_todos(chatId, res){
 
 function add_todo(chatId, res, message){
   try{
-    if((user_state[chatId].state!="adding_name")&&(user_state[chatId].state!="adding_datetime")){
+    if((user_state[chatId].state=="default")){
       axios.post(TELEGRAM_URI, {
         chat_id:chatId,
         text: 'Please write the description or name of your todo: '
@@ -195,7 +190,7 @@ function add_todo(chatId, res, message){
 
 function complete_todo(chatId, res, message){
   try{
-    if(complete_re.test(message.text)==true){
+    if(complete_re.test(message.text)){
       db.all(`SELECT * FROM todos WHERE id = ? AND user_id = ?`, [message.text.replace(/\/complete_todo* /, ""), chatId], (err, rows) => {
         if(err) return console.error(err.message);
         if(typeof(rows[0])==="undefined"){
@@ -219,7 +214,7 @@ function complete_todo(chatId, res, message){
         }
       })
     }
-    else if((user_state[chatId].state!="compliting_todo")&&(complete_re.test(message.text)!=true)){
+    else if((user_state[chatId].state == "default")&&(!complete_re.test(message.text))){
       axios.post(TELEGRAM_URI, {
         chat_id:chatId,
         text: "Please write the id of your todo "
@@ -233,7 +228,7 @@ function complete_todo(chatId, res, message){
             text: `it is not an id, please write an id`
           });
         }
-        else if(isNaN(message.text) == false){
+        else if(!isNaN(message.text)){
           db.all(`SELECT * FROM todos WHERE id = ? AND user_id = ?`, [message.text, chatId], (err, rows) => {
             if(err) return console.error(err.message);
             if(typeof(rows[0])==="undefined"){
@@ -268,7 +263,7 @@ function complete_todo(chatId, res, message){
 
 function edit_todo(chatId, res, message){
   try{
-    if(edit_re.test(message.text)==true){
+    if(edit_re.test(message.text)){
       db.all(`SELECT * FROM todos WHERE id = ? AND user_id = ?`, [message.text.replace(/\/edit_todo* /, ""), chatId], (err, rows) => {
         if(err) return console.error(err.message);
         if(typeof(rows[0])==="undefined"){
@@ -287,7 +282,7 @@ function edit_todo(chatId, res, message){
         }
       })
     }
-    else if((user_state[chatId].state !="choosing_id")&&(user_state[chatId].state != "editing_name")&&(user_state[chatId].state != "editing_datetime")){
+    else if((user_state[chatId].state == "default")){
       axios.post(TELEGRAM_URI, {
         chat_id:chatId,
         text: "Please write the id of your todo "
@@ -301,7 +296,7 @@ function edit_todo(chatId, res, message){
           text: `it is not an id, please write an id`
         });
       }
-      else if(isNaN(message.text) == false){
+      else if(!isNaN(message.text)){
         db.all(`SELECT * FROM todos WHERE id = ? AND user_id = ?`, [message.text, chatId], (err, rows) => {
           if(err) return console.error(err.message);
           if(typeof(rows[0])==="undefined"){
@@ -353,7 +348,7 @@ function edit_todo(chatId, res, message){
 
 function delete_todo(chatId, res, message){
   try{
-    if(delete_re.test(message.text)==true){
+    if(delete_re.test(message.text)){
       db.all(`SELECT * FROM todos WHERE id = ? AND user_id = ?`, [message.text.replace(/\/delete_todo* /, ""), chatId], (err, rows) => {
         if(err) return console.error(err.message);
         if(typeof(rows[0])==="undefined"){
@@ -374,7 +369,7 @@ function delete_todo(chatId, res, message){
         }
       })
     }
-    else if(user_state[chatId].state!="deleting_todo"){
+    else if(user_state[chatId].state == "default"){
       axios.post(TELEGRAM_URI, {
         chat_id:chatId,
         text: "Please write the id of your todo "
@@ -388,7 +383,7 @@ function delete_todo(chatId, res, message){
           text: `it is not an id, please write an id`
         });
       }
-      else if(isNaN(message.text) == false){
+      else if(!isNaN(message.text)){
         db.all(`SELECT * FROM todos WHERE id = ? AND user_id = ?`, [message.text, chatId], (err, rows) => {
           if(err) return console.error(err.message);
           if(typeof(rows[0])==="undefined"){
