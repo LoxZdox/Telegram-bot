@@ -12,6 +12,10 @@ const edit_re = new RegExp(/\/edit_todo* \d+/);
 const complete_re = new RegExp(/\/complete_todo* \d+/);
 const delete_re = new RegExp(/\/delete_todo* \d+/);
 
+const time_re1 = new RegExp(/\d{1,2}\/\d{1,2}\/\d{4}/); // for date like this  5/12/2020
+const time_re2 = new RegExp(/\d{4}-\d{1,2}-\d{1,2}/); // for date like this 2020-05-12
+const time_re3 = new RegExp(/\d{1,2}:\d{1,2}/); // for time like this 06:50
+
 let user_state = {}
 const db = new sql3.Database('./todo.db', sql3.OPEN_READWRITE, (err) => {
   if(err) return console.error(err.message);
@@ -75,6 +79,10 @@ app.post('/new-message', async (req, res) => {
     else{
       another(chatId, res)
     };
+})
+
+app.post('send-message', async (req, res) => {
+
 })
 
 function hello(chatId, res){
