@@ -38,9 +38,24 @@ app.use(
   })  
 )
 
+app.post('/send-message', async (res) => {
+  try {
+    axios.post(TELEGRAM_URI, {
+      chat_id: 399110541,
+      text: "Hewwo! oOwOo \nI`m todo-bot",
+    })
+    // res.send('Done')
+  }
+  catch (e) {
+    console.log(e)
+    // res.send(e)
+  }
+})
+
 app.post('/new-message', async (req, res) => {
     const { message } = req.body
     const chatId = message?.chat?.id
+    
     if(!user_state.hasOwnProperty(chatId)){
       user_state[chatId] = {state: "default", todo_text: null, todo_datetime: null, todo_id: null}
     }
@@ -81,9 +96,9 @@ app.post('/new-message', async (req, res) => {
     };
 })
 
-app.post('send-message', async (req, res) => {
 
-})
+
+
 
 function hello(chatId, res){
   try {
@@ -173,6 +188,10 @@ function add_todo(chatId, res, message){
     }
     else if(user_state[chatId].state=="adding_datetime"){
       user_state[chatId].todo_datetime = message.text
+
+      console.log(`${toLocaleString(Date())} is good for my RegExp.`)
+      console.log(`So, does ${message.text} is good for my RegExp?`)
+
       db.run(`INSERT INTO todos(name, datetime, isdone, user_id) VALUES (?, ?, ?, ?)`,
       [user_state[chatId].todo_text, user_state[chatId].todo_datetime , false, chatId],
       (err) => {
