@@ -2,10 +2,10 @@
   "name": "jaba-bot",
   "version": "1.0.0",
   "description": "",
-  "main": "feck.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js"
+    "start-1": "node index.js",
+    "start-2": "node index1.js"
   },
   "repository": {
     "type": "git",
